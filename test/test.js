@@ -473,7 +473,7 @@ module.exports = function test(cb) {
 
 	function fail( name, e ) {
 
-		console.log( style.redBG().white( 'FAIL: ' + name ) );
+		console.log( style.redBG.white( 'FAIL: ' + name ) );
 		console.log( style.red(e) );
 		cb(false);
 	}
