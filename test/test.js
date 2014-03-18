@@ -3,10 +3,9 @@
  */
 
 var assert = require('assert');
+var EventEmitter = require('events').EventEmitter;
 
 var Promise = require('promise');
-var style = require('styleconsole'); 
-
 
 module.exports = function test(cb) {
 
@@ -457,29 +456,366 @@ module.exports = function test(cb) {
 			resolveProxy('a');
 
 
+		},
+
+		'Promise.resolve(value)': function(cb) {
+
+			Promise.resolve('a')
+				.then( function(value) {
+					assert.equal( value, 'a' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+
+		},
+
+		'Promise.resolve({thenable})': function(cb) {
+
+			var resolveProxy;
+
+			var thenable = {
+				then: function(resolve,reject) {
+					resolveProxy = resolve;
+				}
+			};
+
+			Promise.resolve(thenable)
+				.then( function(value) {
+					assert.equal( value, 'a' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+			resolveProxy('a');
+		
+		},
+
+		'Promise.resolve({thenable}) - rejection': function(cb) {
+
+			var rejectProxy;
+
+			var thenable = {
+				then: function(resolve,reject) {
+					rejectProxy = reject;
+				}
+			};
+
+			Promise.resolve(thenable)
+				.then( function(value) {
+					cb( new Error( 'resolve handler called') );
+				} )
+				.catch( function(value) {
+					assert.equal( value, 'a' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+
+			rejectProxy('a');
+		
+		},
+
+		'Promise.reject(value)': function(cb) {
+
+			Promise.reject('a')
+				.then( function(value) {
+					cb( new Error( 'resolve handler called') );
+				} )
+				.catch( function(value) {
+					assert.equal( value, 'a' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+		
+		},
+
+		'Returned thenables are followed in then resolutions': function(cb) {
+
+			// Immediatly resolving thenable
+			var thenable = {
+				then: function(resolve) {
+					resolve('b');
+				}
+			};
+			
+			new Promise( function(resolve,reject) {
+					resolve('a');
+				} )
+				.then( function(value) {
+					return thenable;
+				} )
+				.then(
+					function(value) {
+						assert.equal( value, 'b' );
+						cb();
+					}
+				)
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+		},
+
+		'Returned thenables are followed in then rejections': function(cb) {
+
+			// Immediatly rejecting thenable
+			var thenable = {
+				then: function(resolve,reject) {
+					reject('b');
+				}
+			};
+			
+			new Promise( function(resolve,reject) {
+					resolve('a');
+				} )
+				.then( function(value) {
+					return thenable;
+				} )
+				.catch( function(value) {
+					assert.equal( value, 'b' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+		},
+
+		'Promises resolved with thenables are followed': function(cb) {
+
+			// Immediatly resolving thenable
+			var thenable = {
+				then: function(resolve) {
+					resolve('b');
+				}
+			};
+			
+			new Promise( function(resolve,reject) {
+					resolve(thenable);
+				} )
+				.then(
+					function(value) {
+						assert.equal( value, 'b' );
+						cb();
+					}
+				)
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+		},
+
+		'Promises rejected with thenables are not followed': function(cb) {
+
+			// Immediatly rejecting thenable
+			var thenable = {
+				then: function(resolve,reject) {
+					reject('b');
+				}
+			};
+			
+			new Promise( function(resolve,reject) {
+					reject(thenable);
+				} )
+				.catch( function(value) {
+					assert.equal( value, thenable );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+
+		},
+
+		'Promise.all resolved': function(cb) {
+
+			var ob = {};
+
+			Promise.all( [
+					'string',
+					ob,
+					{
+						then: function(resolve) {
+							resolve('a');
+						}
+					},
+					Promise.resolve(ob),
+					Promise.resolve(5),
+					undefined,
+					null
+				] )
+				.then( function(value) {
+
+					assert.deepEqual( value, [
+						'string',
+						ob,
+						'a',
+						ob,
+						5,
+						undefined,
+						null
+					]);
+
+					cb();
+
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+		},
+
+		'Promise.all rejected': function(cb) {
+
+			var ob = {};
+
+			Promise.all( [
+					'string',
+					ob,
+					{
+						then: function(resolve,reject) {
+							reject('a');
+						}
+					},
+					Promise.resolve(ob),
+					Promise.resolve(5),
+					Promise.reject('b'),
+					undefined,
+					null
+				] )
+				.catch( function(value) {
+					assert.equal( value, 'a' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+		},
+
+		'Promise.all sequence': function(cb) {
+
+			var ob = {};
+
+			Promise.all( {
+					0: Promise.resolve(ob),
+					1: Promise.resolve(5),
+					length: 2
+				} )
+				.then( function(value) {
+
+					assert.deepEqual( value, [
+						ob,
+						5
+					]);
+
+					cb();
+
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+		},
+
+		'Promise.race resolved': function(cb) {
+
+			var ob = {};
+
+			Promise.race( [
+					'string',
+					ob,
+					{
+						then: function(resolve) {
+							resolve('a');
+						}
+					},
+					Promise.resolve(ob),
+					Promise.resolve(5),
+					undefined,
+					null
+				] )
+				.then( function(value) {
+
+					assert.equal( value, 'string' );
+					cb();
+
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+		},
+
+		'Promise.race rejected': function(cb) {
+
+			var ob = {};
+
+			Promise.all( [
+					Promise.reject('b'),
+					ob,
+					{
+						then: function(resolve,reject) {
+							reject('a');
+						}
+					},
+					Promise.resolve(ob),
+					Promise.resolve(5),
+					undefined,
+					null
+				] )
+				.catch( function(value) {
+					assert.equal( value, 'b' );
+					cb();
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
+		},
+
+		'Promise.race sequence': function(cb) {
+
+			var ob = {};
+
+			Promise.race( {
+					0: Promise.resolve(ob),
+					1: Promise.resolve(5),
+					length: 2
+				} )
+				.then( function(value) {
+
+					assert.equal( value, ob);
+
+					cb();
+
+				} )
+				.catch( function(e) {
+					cb( e || new Error( 'reject handler called') );
+				} );
 		}
 
 
 	};
 
-	// Thenable
-	// resolve
-	// reject
-	// all
-	// race
 	// Turn into event emitter
+
+	var emitter = new EventEmitter();
 
 	var cursor = -1;
 
 	function fail( name, e ) {
 
-		console.log( style.redBG.white( 'FAIL: ' + name ) );
-		console.log( style.red(e) );
+		emitter.emit( 'fail', name, e );
 		cb(false);
 	}
 
 	function pass( name ) {
-		console.log( style.green( 'PASS: ' + name ) );
+		emitter.emit( 'pass', name );
 		nextTest();
 	}
 
@@ -521,330 +857,7 @@ module.exports = function test(cb) {
 
 	nextTest();
 
-		
-
-	/*	.then( undefined, function(value) {
-			++count;
-			checkCount( 6, 'Second promise rejected' );
-			checkValue( 'bar', value, 'Check reject returned value' );
-		} )
-		.then(
-			function() {
-				++count;
-				checkCount( 7, 'Resolution follows caught value' );
-			},
-			function() {
-				checkCount( NaN, 'Unreachable code' );
-			}
-		)
-		.then( function() {
-			++count;
-			checkCount( 8, 'Creating Promise.resolve' );
-			return Promise.resolve();
-		} )
-		.then(
-			function() {
-				++count;
-				checkCount( 9, 'Promise.resolve' );
-			},
-			function() {
-				checkCount( NaN, 'Unreachable code' );
-			}
-		)
-		.then( function() {
-			++count;
-			checkCount( 10, 'Creating Promise.reject' );
-			return Promise.reject();
-		} )
-		.then(
-			function() {
-				checkCount( NaN, 'Unreachable code' );
-			},
-			function() {
-				++count;
-				checkCount( 11, 'Promise.reject' );	
-			}
-		)
-		.then( function() {
-			++count;
-			checkCount( 12, 'Creating Promise.resolve' );
-			return Promise.resolve('fee');
-		} )
-		.then()
-		.then( 
-			function(value) {
-				++count;
-				checkCount( 13, 'Resolve passes through undefined' );
-				checkValue( 'fee', value, 'Check resolve fallthrough value' );
-			},
-			function() {
-				checkCount( NaN, 'Unreachable code' );
-			}
-		)
-		.then( function() {
-			++count;
-			checkCount( 14, 'Creating Promise.reject' );
-			return Promise.reject('foe');
-		} )
-		.then()
-		.then( 
-			function() {
-				checkCount( NaN, 'Unreachable code' );
-			},
-			function(value) {
-				++count;
-				checkCount( 15, 'Reject passes through undefined' );
-				checkValue( 'foe', value, 'Check reject fallthrough value' );	
-			}
-		)
-		.then( function(value) {
-			++count;
-			checkCount( 16, 'Test throwing' );
-			throw 'bar';
-		} )
-		.catch( function(value) {
-			++count;
-			checkCount( 17, 'Thrown value caught in catch' );
-			checkValue( 'bar', value, 'Check thrown value' );	
-			throw 'la';
-		} )
-		.then( undefined, function(value) {
-			++count;
-			checkCount( 18, 'Thrown value caught in then' );
-			checkValue( 'la', value, 'Check thrown value' );	
-			throw 'ti';
-		} )
-		.then( function() {
-				checkCount( NaN, 'Unreachable code' );
-		} )
-		.then( undefined, function(value) {
-			++count;
-			checkCount( 19, 'Thrown value passes through undefined' );
-			checkValue( 'ti', value, 'Check thrown value' );	
-		} )
-		.then( function(value) {
-			
-			return new Promise( function(resolve) {
-				resolve();
-			} ).then( function(value) {
-				++count;
-				checkCount( 20, 'Returned promised are followed' );
-				return 'far';
-			} );
-
-		} )
-        .then( function() {
-            ++count;
-			checkCount( 21, 'Returned promise value' );
-			checkValue( 'far', value, 'Check returned value' );	
-        } )
-        .then( function() { // Not yet supported by Firefox
-			var promise = new Promise(function(){});
-			assert.strictEqual( promise, Promise.resolve(promise) );
-			++count;
-			checkCount( 22, 'resolve casting a promise to a promise' );                      
-		} )
-		.catch( function() {
-			checkCount( NaN, 'Unreachable code' );
-		} )
-		.then( function() {
-			var thenable = {
-				then: function(resolve) {
-					resolve('foo');
-				}
-			};
-
-			++count;
-			checkCount( 23, 'resolve casting a promise to a promise' );
-
-			return Promise.resolve(thenable);                      
-		} )
-		.then( function(value) {
-			++count;
-			checkCount( 24, 'resolve cast thenable' );
-			checkValue( 'foo', value, 'Check thenable return' );
-			return {
-				then: function(resolve) {
-					resolve('bar');
-				}
-			}; 
-		} )
-        .then( function(value) {
-			++count;
-			checkCount( 25, 'resolve returned thenable' );
-			checkValue( 'bar', value, 'Check thenable return' );
-        })
-       .then( function() {
-          
-           ++count;
-			checkCount( 26, 'check resolved all' );
-           
-           
-           return Promise.all( [
-                'string',
-                ob,
-                {
-                   then: function(resolve) {
-                        ++count;
-                       checkCount( 27, 'thenable in all' );
-                       resolve('la');
-                   }
-                },
-                Promise.resolve(ob),
-                Promise.resolve(5),
-                undefined,
-                null
-           ] );
-       } )
-       .then( function(value) {
-           
-           assert.strictEqual( Array.isArray(value), true, 'all returns array' );
-           assert.strictEqual( value.length, 7, 'all array length' );
-           assert.strictEqual( value[0], 'string' );
-           assert.strictEqual( value[1], ob );
-           assert.strictEqual( value[2], 'la' );
-           assert.strictEqual( value[3], ob );
-           assert.strictEqual( value[4], 5 );
-           assert.strictEqual( value[5], undefined );
-           assert.strictEqual( value[6], null );
-           
-           ++count;
-		   checkCount( 28, 'all results' );
-          
-       } )
-       .then( 
-           null,
-           function() {
-			   checkCount( NaN, 'Unreachable code' );
-	      } 
-       )
-       .then( function() {
-          
-           ++count;
-		   checkCount( 29, 'check rejected all' );
-           
-           return Promise.all( [
-                'string',
-                ob,
-                Promise.reject('ti'),
-                {
-                   then: function(resolve, reject) {
-                       ++count;
-                       checkCount( 30, 'all promises are run' );
-                       reject('far');
-                   }
-                },
-                {
-                   then: function(resolve, reject) {
-                       ++count;
-                       checkCount( 31, 'all promises are run' );
-                       reject('la');
-                   }
-                },
-                Promise.resolve(5),
-                undefined,
-                Promise.reject('x')
-           ] );
-       } )
-       .then( 
-           function() {
-			   checkCount( NaN, 'Unreachable code' );
-	       },
-           function(value) {
-           ++count;
-		   checkCount( 32, 'rejected and all promises are run' );
-           checkValue( 'far', value, 'first rejected returned' );
-       } )
-       .then( function() {
-          
-           ++count;
-		   checkCount( 33, 'check resolve race' );
-           
-           return Promise.race( [
-               Promise.resolve('foo'), 
-               {
-                   then: function(resolve) {
-                        ++count;
-                       checkCount( 34, 'thenable in all' );
-                       resolve('la');
-                   }
-                },
-                'string',
-                ob,
-                Promise.resolve(ob),
-                Promise.resolve(5),
-                undefined,
-                null
-           ] );
-       } )
-	   .then( function(value) {
-               ++count;
-               checkCount( 35, 'race resolves' );
-               checkValue( 'la', value, 'first resolved returned' );
-          },
-          function() {
-             checkCount( NaN, 'Unreachable code' );
-          }       
-       )
-       .then( function() {
-          
-           ++count;
-		   checkCount( 36, 'check rejected race' );
-           
-           return Promise.race( [
-         
-                Promise.reject('ti'),
-                {
-                   then: function(resolve, reject) {
-                       ++count;
-                       checkCount( 37, 'all promises are run' );
-                       reject('far');
-                   }
-                },
-                {
-                   then: function(resolve, reject) {
-                       ++count;
-                       checkCount( 38, 'all promises are run' );
-                       reject('la');
-                   }
-                },
-                Promise.resolve(5),
-                undefined,
-                Promise.reject('x')
-           ] );
-       } )
-       .then( 
-           function() {
-			   checkCount( NaN, 'Unreachable code' );
-	       },
-           function(value) {
-               ++count;
-               checkCount( 39, 'rejected and all promises are run' );
-               checkValue( 'far', value, 'first rejected returned' );
-          } 
-       )
-       .then( function() {  
-           // Check errors
-           new Proimse();
-       } )
-       .then( 
-           function() {
-			   checkCount( NaN, 'Unreachable code' );
-	       },
-           function(e) {
-               ++count;
-               checkCount( 40, 'rejected and all promises are run' );
-               checkValue( e instanceof, TypeError, 'Is a type error' );
-               checkValue( e.message, 'You must pass a resolver function as the first argument to the promise constructor', 'Has the right message' );
-          } 
-       )*/
-    
-   
-
-
-	// @todo values that are not funcations are ignore
-    // @todo error meesages for all, race
-    // @todo can only be resolved/rejected once
+	return emitter;
 
 
 };
