@@ -1,4 +1,16 @@
 { 
-	"name" : "promise",
-	"main" : "./lib/promise.js" 
+	"name" : "promise-polyfill",
+	"description": "A polyfill for the ES6 Promise object",
+	"version": "0.1.0",
+	"license": "MIT",
+	"author": "Daniel Lewis",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mrdaniellewis/node-promise-polyfill"
+	},
+	"main" : "./lib/promise-polyfill.js",
+	"engines" : { "node" : ">= 0.10.0" },
+	"devDependancies": {
+		"console-style": "*"
+	}
 }

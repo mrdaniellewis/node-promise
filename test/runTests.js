@@ -1,15 +1,17 @@
 /**
  *	Tests for Promise polyfill
+ *
+ *	Runs the tests and outputs to the console.
  */
 
-var style = require('styleconsole'); 
+var style = require('console-style'); 
 
 var test = require('./test.js');
 var emitter = test( function(result) {
 		if ( result ) {
-			console.log('SUCCESS: All tests complete');
+			console.log( style.greenBG.black('SUCCESS: All tests complete') );
 		} else {
-			console.log('FAILURE: Test returned an error');
+			console.log( style.bold.redBG.white('FAILURE: Test returned an error') );
 		}
 
 	} )

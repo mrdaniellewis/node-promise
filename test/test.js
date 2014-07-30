@@ -5,7 +5,7 @@
 var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 
-var Promise = require('promise');
+var Promise = require('promise-polyfill');
 
 module.exports = function test(cb) {
 
