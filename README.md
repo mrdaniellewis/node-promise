@@ -1,6 +1,6 @@
 # Promise polyfill for node.js
 
-*Don't use this, [this one](https://github.com/taylorhakes/promise-polyfill) by someone else is better.
+*Don't use this*: [this one](https://github.com/taylorhakes/promise-polyfill) by someone else is better.
 
 A polyfill for ES6 Promise object for Node v0.10.
 
