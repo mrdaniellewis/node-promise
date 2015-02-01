@@ -1,5 +1,7 @@
 # Promise polyfill for node.js
 
+*Don't use this, [this one](https://github.com/taylorhakes/promise-polyfill) by someone else is better.
+
 A polyfill for ES6 Promise object for Node v0.10.
 
 Node version 0.11 and above uses a version of V8 with the native Promise object and will not require this.
@@ -8,17 +10,6 @@ All about promises:
 
 * http://www.html5rocks.com/en/tutorials/es6/promises/
 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
-
-# Alternatives
-
-NPM has many other, possibly superior, repositories that do 
-exactly what this does: https://www.npmjs.org/search?q=promise
-
-# Install
-
-```bash
-$ npm install promise-polyfill
-```
 
 # Usage
 
