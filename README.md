@@ -16,7 +16,7 @@ All about promises:
 ```javascript
 // In anticipation of native support in future Node versions
 if ( typeof Promise === 'undefined' ) {
-	var Promise = require('promise-polyfill');
+	global.Promise = require('promise-polyfill');
 }
 ```
 
